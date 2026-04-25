@@ -1,7 +1,7 @@
 """
 {{PAPER_TITLE}} — Model Architecture
 
-Paper: https://arxiv.org/abs/{{ARXIV_ID}}
+Paper: {{PAPER_URL}}
 Authors: {{AUTHORS}}
 Year: {{YEAR}}
 

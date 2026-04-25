@@ -1,6 +1,6 @@
 ---
 name: paper2code
-description: Converts an arxiv paper or local PDF into a minimal, citation-anchored Python implementation. Trigger when user runs /paper2code with an arxiv URL or paper ID, says "implement this paper", pastes an arxiv link, or provides --pdf /path/to/paper.pdf. Flags all ambiguities honestly. Never invents implementation details not stated in the paper.
+description: Converts any research paper (arXiv, local PDF, or other source) into a minimal, citation-anchored Python implementation. Trigger when user runs /paper2code with an arxiv URL or paper ID, says "implement this paper", pastes an arxiv link, provides --pdf /path/to/paper.pdf, or asks to implement a paper from a local file. Flags all ambiguities honestly. Never invents implementation details not stated in the paper.
 ---
 
 # paper2code — Orchestration
@@ -38,7 +38,7 @@ Read and follow: `pipeline/01_paper_acquisition.md`
 Run the helper script to fetch and parse the paper:
 ```bash
 # ArXiv mode:
-python skills/paper2code/scripts/fetch_paper.py {ARXIV_ID} .paper2code_work/{SLUG}/
+python skills/paper2code/scripts/fetch_paper.py {PAPER_ID} .paper2code_work/{SLUG}/
 
 # Local PDF mode:
 python skills/paper2code/scripts/fetch_paper.py --pdf /path/to/paper.pdf .paper2code_work/{SLUG}/ --title "Paper Title" [--authors "A. B"] [--abstract "..."]
@@ -49,7 +49,7 @@ python skills/paper2code/scripts/extract_structure.py .paper2code_work/{SLUG}/pa
 ```
 Verify the outputs exist before proceeding. If extraction failed, follow the fallback protocol in `pipeline/01_paper_acquisition.md`.
 
-The script also searches for official code repositories (in the paper text and on the arxiv page) and saves any found links to `paper_metadata.json` under the `official_code` key. Verify these links before relying on them — see Step 8 in `pipeline/01_paper_acquisition.md`.
+The script also searches for official code repositories in the paper text and saves any found links to `paper_metadata.json` under the `official_code` key. Verify these links before relying on them — see Step 8 in `pipeline/01_paper_acquisition.md`. (For local PDFs, no external code search is available.)
 
 ### Stage 2 — Contribution Identification
 Read and follow: `pipeline/02_contribution_identification.md`

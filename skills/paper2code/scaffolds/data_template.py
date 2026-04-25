@@ -1,7 +1,7 @@
 """
 {{PAPER_TITLE}} — Dataset and Data Loading
 
-Paper: https://arxiv.org/abs/{{ARXIV_ID}}
+Paper: {{PAPER_URL}}
 Implements: Data loading for {{DATASET_NAME}}
 
 Section references:

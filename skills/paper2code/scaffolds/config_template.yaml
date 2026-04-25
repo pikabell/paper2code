@@ -1,5 +1,5 @@
 # Configuration for {{PAPER_TITLE}}
-# Paper: https://arxiv.org/abs/{{ARXIV_ID}}
+# Paper: {{PAPER_URL}}
 #
 # CONVENTION:
 #   - Lines with §X.Y cite the paper section specifying this value

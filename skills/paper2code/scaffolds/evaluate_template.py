@@ -1,7 +1,7 @@
 """
 {{PAPER_TITLE}} — Evaluation Metrics
 
-Paper: https://arxiv.org/abs/{{ARXIV_ID}}
+Paper: {{PAPER_URL}}
 Implements: Metric computation for {{METRICS_LISTED}}
 
 Section references:

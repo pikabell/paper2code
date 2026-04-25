@@ -92,7 +92,7 @@ Every hyperparameter in one place. No magic numbers in code. Format:
 
 ```yaml
 # Configuration for {paper_title}
-# Paper: {arxiv_url}
+# Paper: {paper_url}
 # All values cited to paper section or flagged as [UNSPECIFIED]
 
 model:
@@ -123,7 +123,7 @@ training:
 """
 {Paper title} — Model Architecture
 
-Paper: {arxiv_url}
+Paper: {paper_url}
 Implements: {one-line description of what this file implements}
 
 Section references:

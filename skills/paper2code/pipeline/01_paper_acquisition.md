@@ -1,10 +1,10 @@
 # Stage 1: Paper Acquisition and Parsing
 
 ## Purpose
-Fetch the arxiv paper, extract its full text with mathematical notation preserved, and produce a structured markdown representation that downstream stages can consume section by section.
+Fetch the paper (from arXiv or local PDF), extract its full text with mathematical notation preserved, and produce a structured markdown representation that downstream stages can consume section by section.
 
 ## Input
-- `ARXIV_ID`: e.g., `2106.09685` or `2106.09685v2`
+- `PAPER_ID`: e.g., `2106.09685` (arXiv) or `local_pdf` (local PDF)
 - Local PDF mode: `--pdf /path/to/paper.pdf --title "Title" [--authors "A, B"] [--abstract "..."]`
 
 ## Output
@@ -87,29 +87,30 @@ This deserves its own step because it's that important:
    - Architecture diagrams described in text
    - Training details (often Appendix C or D)
    - Ablation studies (contain information about what matters and what doesn't)
-4. If the paper references a supplementary PDF, note this — you may need to fetch it separately from the arxiv page
+4. If the paper references a supplementary PDF, note this — you may need to fetch it separately (from the arXiv page if this is an arXiv paper)
 
 ### Step 7: Extract metadata
 
-From the paper text or arxiv page, extract:
+From the paper text, extract:
 - Title
 - Authors
 - Year
-- Arxiv categories (e.g., cs.LG, cs.CV)
 - Abstract (first 500 words)
+
+**For arXiv papers only:** Also extract arXiv categories (e.g., cs.LG, cs.CV) from the arXiv page.
 
 Save to `paper_metadata.json`.
 
 ### Step 8: Search for official code repositories
 
-The `fetch_paper.py` script automatically searches for official code in two places:
+The `fetch_paper.py` script automatically searches for official code:
 
 1. **Inside the paper text** — scans for GitHub/GitLab/Bitbucket URLs and phrases like "code available at," "our implementation is released at," etc.
-2. **The arxiv abstract page** — checks for code repository links in the page HTML.
+2. **For arXiv papers only:** The arXiv abstract page — checks for code repository links in the page HTML.
 
 Results are saved to `paper_metadata.json` under the `official_code` key. Each entry has:
 - `url` — the repository URL
-- `source` — where it was found (`paper_text` or `arxiv_page`)
+- `source` — where it was found (`paper_text` or `arxiv_page` for arXiv papers; `paper_text` only for local PDFs)
 - `context` — surrounding text that confirms it's the authors' code
 
 **After the script runs, verify the links:**
@@ -123,10 +124,12 @@ If official code is found, it becomes a critical resource for Stage 3 (Ambiguity
 
 ## Fallback protocol
 
-### If PDF download fails (403, 404, network error):
+### If PDF download fails (403, 404, network error) — arXiv papers only:
 1. Try the ar5iv HTML version: `https://ar5iv.labs.arxiv.org/html/{id}`
 2. If that also fails, try the abstract page: `https://arxiv.org/abs/{id}` to verify the paper exists
-3. If the paper exists but can't be fetched, ask the user to download it manually and provide the path
+3. If the paper exists but can't be fetched, ask the user to download it manually and provide the path via `--pdf`
+
+**For local PDFs:** If extraction fails, ask the user to verify the PDF is readable text (not a scanned image).
 
 ### If extraction produces garbled text:
 1. Try `pdfplumber` instead of `pymupdf4llm`

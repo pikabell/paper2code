@@ -1,7 +1,7 @@
 """
 {{PAPER_TITLE}} — Loss Functions
 
-Paper: https://arxiv.org/abs/{{ARXIV_ID}}
+Paper: {{PAPER_URL}}
 Implements: {{LOSS_DESCRIPTION}}
 
 Section references:

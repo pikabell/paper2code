@@ -9,7 +9,7 @@ This is the most important anti-hallucination stage. Before generating a single 
 - Official code repository (if found in Stage 1 — URL in `paper_metadata.json` under `official_code`)
 
 ## Output
-- `.paper2code_work/{ARXIV_ID}/ambiguity_audit.md` — complete audit with classification for every item
+- `.paper2code_work/{SLUG}/ambiguity_audit.md` — complete audit with classification for every item
 
 ---
 
@@ -165,7 +165,7 @@ If official code was found in Stage 1, use it as a primary resource for resolvin
 
 ## Output format
 
-Save to `.paper2code_work/{ARXIV_ID}/ambiguity_audit.md`:
+Save to `.paper2code_work/{SLUG}/ambiguity_audit.md`:
 
 ```markdown
 # Ambiguity Audit: {paper_title}

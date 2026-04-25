@@ -10,7 +10,7 @@
 - **Title:** {{PAPER_TITLE}}
 - **Authors:** {{AUTHORS}}
 - **Year:** {{YEAR}}
-- **ArXiv:** https://arxiv.org/abs/{{ARXIV_ID}}
+- **Paper ID:** {{PAPER_ID}}
 - **Official code:** {{OFFICIAL_CODE_URL or "None found"}}
 
 ---

@@ -1,7 +1,7 @@
 """
 {{PAPER_TITLE}} — Training Loop
 
-Paper: https://arxiv.org/abs/{{ARXIV_ID}}
+Paper: {{PAPER_URL}}
 Implements: {{TRAINING_DESCRIPTION}}
 
 Section references:

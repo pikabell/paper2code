@@ -190,12 +190,12 @@ If the paper has a published erratum, correction, or the authors have acknowledg
 
 ```python
 # §3.2, Eq. 4 — Original paper has a typo: denominator should be sqrt(d_k), not d_k
-# ERRATUM: Acknowledged by authors in arxiv v2 (see changelog)
+# ERRATUM: If this is an arXiv paper, check for v2, v3 — authors often correct typos in later versions
 # We implement the corrected version
 scores = torch.matmul(q, k.transpose(-2, -1)) / math.sqrt(self.d_k)
 ```
 
-Check arxiv for paper versions — v2, v3 often contain corrections. The abstract page shows the version history.
+**For arXiv papers:** Check for later versions — v2, v3 often contain corrections. The abstract page shows the version history. (Not applicable to local PDFs — version info is not available.)
 
 ---
 

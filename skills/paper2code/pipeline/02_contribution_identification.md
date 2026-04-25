@@ -8,7 +8,7 @@ Before writing any code, you must understand exactly what this paper contributes
 - `paper_metadata.json` (includes `official_code` links if any were found)
 
 ## Output
-- `.paper2code_work/{ARXIV_ID}/contribution.md` — contains the contribution statement, paper classification, and implementation scope
+- `.paper2code_work/{SLUG}/contribution.md` — contains the contribution statement, paper classification, and implementation scope
 
 ---
 
@@ -117,7 +117,7 @@ Write a structured contribution statement and save it to `contribution.md`:
 ## Paper
 {title} ({year})
 {authors}
-arxiv: {id}
+paper_id: {id or "local_pdf"}
 
 ## One-sentence summary
 {what this paper does in one sentence}
