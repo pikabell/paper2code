@@ -31,10 +31,10 @@ import torch
 import torch.nn as nn
 import yaml
 
-from model import UNet, UNetConfig
-from loss import DDPMLoss
-from data import get_dataloaders
-from utils import linear_noise_schedule, q_sample, EMA
+from src.model import UNet, UNetConfig
+from src.loss import DDPMLoss
+from src.data import get_dataloaders
+from src.utils import linear_noise_schedule, q_sample, EMA
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 logger = logging.getLogger(__name__)

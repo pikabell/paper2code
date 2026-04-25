@@ -169,12 +169,20 @@ def fetch_metadata(arxiv_id: str) -> dict:
     # Categories
     categories = re.findall(r'<category[^>]*term="([^"]+)"', entry)
 
+    # Year — extracted from abstract text (published year)
+    year = None
+    if abstract:
+        year_match = re.search(r"\b(19|20)\d{2}\b", abstract)
+        if year_match:
+            year = year_match.group(0)
+
     return {
         "arxiv_id": arxiv_id,
         "title": title,
         "authors": author_names,
         "abstract": abstract,
         "categories": categories,
+        "year": year,
     }
 
 
@@ -414,11 +422,18 @@ def extract_local_pdf(pdf_path: Path, title: str | None, authors: str | None, ab
     if paper_text is None:
         paper_text = extract_with_pdfplumber(pdf_path)
 
+    year = None
+    if abstract:
+        year_match = re.search(r"\b(19|20)\d{2}\b", abstract)
+        if year_match:
+            year = year_match.group(0)
+
     metadata = {
         "title": title or pdf_path.stem.replace("_", " ").replace("-", " "),
         "authors": [a.strip() for a in authors.split(",")] if authors else [],
         "abstract": abstract or "",
         "categories": [],
+        "year": year,
     }
 
     return metadata, paper_text

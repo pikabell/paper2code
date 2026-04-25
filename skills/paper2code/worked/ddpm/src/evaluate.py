@@ -31,8 +31,8 @@ import torch
 import torchvision
 import yaml
 
-from model import UNet, UNetConfig
-from utils import linear_noise_schedule, sample, EMA
+from src.model import UNet, UNetConfig
+from src.utils import linear_noise_schedule, sample, EMA
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s — %(message)s")
 logger = logging.getLogger(__name__)
