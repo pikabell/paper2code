@@ -1,6 +1,6 @@
 ---
 name: paper2code
-description: Converts an arxiv paper into a minimal, citation-anchored Python implementation. Trigger when user runs /paper2code with an arxiv URL or paper ID, says "implement this paper", or pastes an arxiv link asking for implementation. Flags all ambiguities honestly. Never invents implementation details not stated in the paper.
+description: Converts an arxiv paper or local PDF into a minimal, citation-anchored Python implementation. Trigger when user runs /paper2code with an arxiv URL or paper ID, says "implement this paper", pastes an arxiv link, or provides --pdf /path/to/paper.pdf. Flags all ambiguities honestly. Never invents implementation details not stated in the paper.
 ---
 
 # paper2code — Orchestration
@@ -10,16 +10,17 @@ You are executing the paper2code skill. This file governs the high-level flow. E
 ## Parse arguments
 
 Extract from the user's input:
-- `ARXIV_ID`: the arxiv paper ID (e.g., `2106.09685`). Strip any URL prefix.
+- `PAPER_INPUT`: either an arXiv ID/URL (e.g. `2106.09685`) or a path to a local PDF (e.g. `/path/to/paper.pdf`)
 - `MODE`: one of `minimal` (default), `full`, `educational`.
 - `FRAMEWORK`: one of `pytorch` (default), `jax`, `numpy`.
 
 If the user provided a full URL like `https://arxiv.org/abs/2106.09685`, extract the ID `2106.09685`.
 If the user provided a versioned ID like `2106.09685v2`, keep the version.
+If the user provided `--pdf /path/to/paper.pdf`, treat it as a local PDF (skip arXiv-specific steps).
 
 ## Set up working directory
 
-Create a temporary working directory: `.paper2code_work/{ARXIV_ID}/`
+Create a temporary working directory: `.paper2code_work/{SLUG}/`
 This is where intermediate artifacts go. The final output goes in the current directory under `{paper_slug}/`.
 
 ## Install dependencies
@@ -36,11 +37,15 @@ Read and follow: `pipeline/01_paper_acquisition.md`
 
 Run the helper script to fetch and parse the paper:
 ```bash
-python skills/paper2code/scripts/fetch_paper.py {ARXIV_ID} .paper2code_work/{ARXIV_ID}/
+# ArXiv mode:
+python skills/paper2code/scripts/fetch_paper.py {ARXIV_ID} .paper2code_work/{SLUG}/
+
+# Local PDF mode:
+python skills/paper2code/scripts/fetch_paper.py --pdf /path/to/paper.pdf .paper2code_work/{SLUG}/ --title "Paper Title" [--authors "A. B"] [--abstract "..."]
 ```
 Then run structure extraction:
 ```bash
-python skills/paper2code/scripts/extract_structure.py .paper2code_work/{ARXIV_ID}/paper_text.md .paper2code_work/{ARXIV_ID}/
+python skills/paper2code/scripts/extract_structure.py .paper2code_work/{SLUG}/paper_text.md .paper2code_work/{SLUG}/
 ```
 Verify the outputs exist before proceeding. If extraction failed, follow the fallback protocol in `pipeline/01_paper_acquisition.md`.
 
@@ -49,14 +54,14 @@ The script also searches for official code repositories (in the paper text and o
 ### Stage 2 — Contribution Identification
 Read and follow: `pipeline/02_contribution_identification.md`
 
-Read the parsed paper sections. Identify the single core contribution. Classify the paper type. Write the contribution statement. Save it to `.paper2code_work/{ARXIV_ID}/contribution.md`.
+Read the parsed paper sections. Identify the single core contribution. Classify the paper type. Write the contribution statement. Save it to `.paper2code_work/{SLUG}/contribution.md`.
 
 ### Stage 3 — Ambiguity Audit
 Read and follow: `pipeline/03_ambiguity_audit.md`
 
 Before reading this stage, also read: `guardrails/hallucination_prevention.md`
 
-Go through every implementation-relevant detail. Classify each as SPECIFIED, PARTIALLY_SPECIFIED, or UNSPECIFIED. Save the audit to `.paper2code_work/{ARXIV_ID}/ambiguity_audit.md`.
+Go through every implementation-relevant detail. Classify each as SPECIFIED, PARTIALLY_SPECIFIED, or UNSPECIFIED. Save the audit to `.paper2code_work/{SLUG}/ambiguity_audit.md`.
 
 ### Stage 4 — Code Generation
 Read and follow: `pipeline/04_code_generation.md`

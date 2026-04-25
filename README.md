@@ -1,6 +1,6 @@
 # paper2code
 
-> **arxiv URL in → citation-anchored implementation out**
+> **arxiv URL or local PDF in → citation-anchored implementation out**
 
 ```
 ┌─────────────────────────────┐         ┌──────────────────────────────────────┐
@@ -46,7 +46,8 @@ The result: code you can trust because you can verify every decision against the
 ## Install
 
 ```bash
-npx skills add PrathamLearnsToCode/paper2code/skills/paper2code
+# Install from your fork (replace pikabell with your GitHub username)
+npx skills add pikabell/paper2code@paper2code -g -y
 ```
 
 You'll be prompted to:
@@ -92,6 +93,12 @@ claude  # or your preferred agent
 
 ```
 /paper2code 1706.03762
+```
+
+### Local PDF (any paper, not on arXiv)
+
+```
+/paper2code --pdf /path/to/paper.pdf --title "Paper Title" [--authors "A. B"] [--abstract "..."]
 ```
 
 ---

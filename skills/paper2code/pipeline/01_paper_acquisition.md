@@ -5,15 +5,16 @@ Fetch the arxiv paper, extract its full text with mathematical notation preserve
 
 ## Input
 - `ARXIV_ID`: e.g., `2106.09685` or `2106.09685v2`
+- Local PDF mode: `--pdf /path/to/paper.pdf --title "Title" [--authors "A, B"] [--abstract "..."]`
 
 ## Output
-- `.paper2code_work/{ARXIV_ID}/paper_text.md` — full paper text in markdown
-- `.paper2code_work/{ARXIV_ID}/paper_metadata.json` — title, authors, abstract, categories
-- `.paper2code_work/{ARXIV_ID}/sections/` — individual section files
-- `.paper2code_work/{ARXIV_ID}/algorithms/` — extracted algorithm boxes
-- `.paper2code_work/{ARXIV_ID}/equations/` — extracted numbered equations
-- `.paper2code_work/{ARXIV_ID}/tables/` — extracted tables (especially hyperparameter tables)
-- `.paper2code_work/{ARXIV_ID}/footnotes.md` — all footnotes collected
+- `.paper2code_work/{SLUG}/paper_text.md` — full paper text in markdown
+- `.paper2code_work/{SLUG}/paper_metadata.json` — title, authors, abstract, categories
+- `.paper2code_work/{SLUG}/sections/` — individual section files
+- `.paper2code_work/{SLUG}/algorithms/` — extracted algorithm boxes
+- `.paper2code_work/{SLUG}/equations/` — extracted numbered equations
+- `.paper2code_work/{SLUG}/tables/` — extracted tables (especially hyperparameter tables)
+- `.paper2code_work/{SLUG}/footnotes.md` — all footnotes collected
 
 ---
 
@@ -35,6 +36,8 @@ Run `scripts/fetch_paper.py`. The script handles:
 2. Extraction via `pymupdf4llm` (preferred — preserves math notation as LaTeX)
 3. Fallback to `pdfplumber` if pymupdf4llm fails
 4. Fallback to HTML from `https://ar5iv.labs.arxiv.org/html/{id}` if PDF extraction produces garbled output
+
+**For local PDFs:** Pass `--pdf /path/to/paper.pdf --title "..."`. The script skips arXiv downloads and metadata fetching. `--title` is required; `--authors` and `--abstract` are optional.
 
 **How to detect garbled output:** After extraction, scan the first 500 characters. If more than 20% are non-ASCII, non-LaTeX special characters, or if the text has no recognizable English words, the extraction is garbled. Fall back.
 

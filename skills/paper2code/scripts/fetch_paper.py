@@ -1,26 +1,87 @@
 #!/usr/bin/env python3
 """
-Fetch and parse an arxiv paper.
+Fetch and parse an arxiv paper, or process a local PDF.
 
-Usage:
+Usage (arXiv):
     python fetch_paper.py <arxiv_id_or_url> <output_dir>
 
-Examples:
-    python fetch_paper.py 2106.09685 ./output/
-    python fetch_paper.py https://arxiv.org/abs/2106.09685 ./output/
-    python fetch_paper.py 2106.09685v2 ./output/
+    Examples:
+        python fetch_paper.py 2106.09685 ./output/
+        python fetch_paper.py https://arxiv.org/abs/2106.09685 ./output/
+        python fetch_paper.py 2106.09685v2 ./output/
+
+Usage (local PDF):
+    python fetch_paper.py --pdf /path/to/paper.pdf <output_dir>
+        [--title "Paper Title"]
+        [--authors "Author One, Author Two"]
+        [--abstract "Paper abstract text"]
 
 Outputs:
     {output_dir}/paper_text.md      — full paper text in markdown
     {output_dir}/paper_metadata.json — title, authors, abstract, categories
 """
 
+import argparse
 import json
 import re
-import sys
 from pathlib import Path
 
 import requests
+
+
+def slug_from_title(title: str) -> str:
+    """Generate a URL-safe slug from a paper title."""
+    slug = title.lower()
+    slug = re.sub(r"[^a-z0-9]+", "_", slug)
+    slug = re.sub(r"_+", "_", slug)
+    slug = slug.strip("_")
+    if len(slug) > 60:
+        slug = slug[:60].rsplit("_", 1)[0]
+    return slug or "paper"
+
+
+def build_arg_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Fetch and parse an arXiv paper or local PDF.")
+    parser.add_argument(
+        "arxiv_input",
+        nargs="?",
+        default=None,
+        help="arXiv ID or URL (e.g. 2106.09685). Omit when using --pdf.",
+    )
+    parser.add_argument(
+        "output_dir",
+        type=Path,
+        help="Output directory",
+    )
+    parser.add_argument(
+        "--pdf",
+        type=Path,
+        default=None,
+        dest="pdf_path",
+        help="Path to a local PDF file (triggers local PDF mode)",
+    )
+    parser.add_argument(
+        "--title",
+        type=str,
+        default=None,
+        dest="title",
+        help="Paper title (required for local PDF mode)",
+    )
+    parser.add_argument(
+        "--authors",
+        type=str,
+        default=None,
+        dest="authors",
+        help="Paper authors, comma-separated (optional for local PDF)",
+    )
+    parser.add_argument(
+        "--abstract",
+        type=str,
+        default=None,
+        dest="abstract",
+        help="Paper abstract (optional for local PDF)",
+    )
+    return parser
 
 
 def normalize_arxiv_id(input_str: str) -> str:
@@ -36,7 +97,6 @@ def normalize_arxiv_id(input_str: str) -> str:
     """
     input_str = input_str.strip().rstrip("/")
 
-    # Remove common URL prefixes
     for prefix in [
         "https://arxiv.org/abs/",
         "http://arxiv.org/abs/",
@@ -47,15 +107,14 @@ def normalize_arxiv_id(input_str: str) -> str:
             input_str = input_str[len(prefix):]
             break
 
-    # Remove .pdf suffix if present
     if input_str.endswith(".pdf"):
         input_str = input_str[:-4]
 
-    # Validate format: YYMM.NNNNN(vN) or archive/NNNNNNN
     new_style = re.match(r"^\d{4}\.\d{4,5}(v\d+)?$", input_str)
     old_style = re.match(r"^[a-z-]+/\d{7}(v\d+)?$", input_str)
 
     if not new_style and not old_style:
+        import sys
         print(f"WARNING: '{input_str}' may not be a valid arxiv ID.", file=sys.stderr)
 
     return input_str
@@ -336,87 +395,125 @@ def find_official_code(arxiv_id: str, paper_text: str | None, metadata: dict) ->
     return found
 
 
-def main():
-    if len(sys.argv) < 3:
-        print(f"Usage: {sys.argv[0]} <arxiv_id_or_url> <output_dir>", file=sys.stderr)
-        sys.exit(1)
+def extract_local_pdf(pdf_path: Path, title: str | None, authors: str | None, abstract: str | None) -> tuple[dict, str | None]:
+    """Handle a local PDF file: extract text and build metadata."""
+    if not pdf_path.exists():
+        print(f"ERROR: PDF not found: {pdf_path}", file=sys.stderr)
+        return {}, None
 
-    raw_input = sys.argv[1]
-    output_dir = Path(sys.argv[2])
+    print(f"Processing local PDF: {pdf_path}")
+
+    paper_text = None
+    print("\n--- Extracting text ---")
+    paper_text = extract_with_pymupdf4llm(pdf_path)
+
+    if paper_text and not check_text_quality(paper_text):
+        print("  pymupdf4llm text quality poor, trying pdfplumber...")
+        paper_text = None
+
+    if paper_text is None:
+        paper_text = extract_with_pdfplumber(pdf_path)
+
+    metadata = {
+        "title": title or pdf_path.stem.replace("_", " ").replace("-", " "),
+        "authors": [a.strip() for a in authors.split(",")] if authors else [],
+        "abstract": abstract or "",
+        "categories": [],
+    }
+
+    return metadata, paper_text
+
+
+def main():
+    parser = build_arg_parser()
+    args = parser.parse_args()
+
+    output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Step 1: Normalize ID
-    arxiv_id = normalize_arxiv_id(raw_input)
-    print(f"Arxiv ID: {arxiv_id}")
+    pdf_path_arg = args.pdf_path
+    arxiv_input = args.arxiv_input
 
-    # Step 2: Fetch metadata
-    print("\n--- Fetching metadata ---")
-    metadata = fetch_metadata(arxiv_id)
+    if pdf_path_arg:
+        if not args.title:
+            print("ERROR: --title is required in local PDF mode.", file=sys.stderr)
+            sys.exit(1)
+        metadata, paper_text = extract_local_pdf(pdf_path_arg, args.title, args.authors, args.abstract)
+        arxiv_id = None
+    elif arxiv_input:
+        arxiv_id = normalize_arxiv_id(arxiv_input)
+        print(f"ArXiv ID: {arxiv_id}")
+
+        print("\n--- Fetching metadata ---")
+        metadata = fetch_metadata(arxiv_id)
+        print(f"  Title: {metadata['title']}")
+        print(f"  Authors: {', '.join(metadata['authors'][:5])}{'...' if len(metadata['authors']) > 5 else ''}")
+        print(f"  Categories: {', '.join(metadata['categories'])}")
+
+        paper_text = None
+        local_pdf_path = output_dir / "paper.pdf"
+
+        print("\n--- Downloading PDF ---")
+        if download_pdf(arxiv_id, local_pdf_path):
+            print("\n--- Extracting text ---")
+            paper_text = extract_with_pymupdf4llm(local_pdf_path)
+
+            if paper_text and not check_text_quality(paper_text):
+                print("  pymupdf4llm text quality poor, trying pdfplumber...")
+                paper_text = None
+
+            if paper_text is None:
+                paper_text = extract_with_pdfplumber(local_pdf_path)
+
+            if paper_text and not check_text_quality(paper_text):
+                print("  pdfplumber text quality poor, trying ar5iv HTML...")
+                paper_text = None
+
+        if paper_text is None:
+            print("\n--- Trying ar5iv HTML fallback ---")
+            paper_text = fetch_ar5iv_html(arxiv_id)
+    else:
+        parser.print_help()
+        sys.exit(1)
+
+    if paper_text is None:
+        print("\nERROR: All extraction methods failed.", file=sys.stderr)
+        sys.exit(1)
+
     metadata_path = output_dir / "paper_metadata.json"
     with open(metadata_path, "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2, ensure_ascii=False)
-    print(f"  Title: {metadata['title']}")
-    print(f"  Authors: {', '.join(metadata['authors'][:5])}{'...' if len(metadata['authors']) > 5 else ''}")
-    print(f"  Categories: {', '.join(metadata['categories'])}")
-
-    # Step 3: Download and extract PDF
-    paper_text = None
-    pdf_path = output_dir / "paper.pdf"
-
-    print("\n--- Downloading PDF ---")
-    if download_pdf(arxiv_id, pdf_path):
-        # Try pymupdf4llm first
-        print("\n--- Extracting text ---")
-        paper_text = extract_with_pymupdf4llm(pdf_path)
-
-        # Check quality
-        if paper_text and not check_text_quality(paper_text):
-            print("  pymupdf4llm text quality poor, trying pdfplumber...")
-            paper_text = None
-
-        # Fallback to pdfplumber
-        if paper_text is None:
-            paper_text = extract_with_pdfplumber(pdf_path)
-
-        if paper_text and not check_text_quality(paper_text):
-            print("  pdfplumber text quality poor, trying ar5iv HTML...")
-            paper_text = None
-
-    # Step 4: Fallback to ar5iv HTML
-    if paper_text is None:
-        print("\n--- Trying ar5iv HTML fallback ---")
-        paper_text = fetch_ar5iv_html(arxiv_id)
-
-    # Step 5: Save results
-    if paper_text is None:
-        print("\nERROR: All extraction methods failed.", file=sys.stderr)
-        print("Please download the paper manually and provide the text.", file=sys.stderr)
-        sys.exit(1)
 
     text_path = output_dir / "paper_text.md"
     with open(text_path, "w", encoding="utf-8") as f:
         f.write(f"# {metadata['title']}\n\n")
-        f.write(f"**Authors:** {', '.join(metadata['authors'])}\n\n")
-        f.write(f"**ArXiv:** https://arxiv.org/abs/{arxiv_id}\n\n")
+        if metadata["authors"]:
+            f.write(f"**Authors:** {', '.join(metadata['authors'])}\n\n")
+        if arxiv_id:
+            f.write(f"**ArXiv:** https://arxiv.org/abs/{arxiv_id}\n\n")
+        if metadata["abstract"]:
+            f.write(f"**Abstract:** {metadata['abstract']}\n\n")
         f.write("---\n\n")
         f.write(paper_text)
 
-    # Step 6: Search for official code repositories
-    code_links = find_official_code(arxiv_id, paper_text, metadata)
-    if code_links:
-        metadata["official_code"] = code_links
-        # Re-save metadata with code links
-        with open(metadata_path, "w", encoding="utf-8") as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
-        for link in code_links:
-            print(f"  Found: {link['url']} (source: {link['source']})")
+    if arxiv_id:
+        code_links = find_official_code(arxiv_id, paper_text, metadata)
+        if code_links:
+            metadata["official_code"] = code_links
+            with open(metadata_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            for link in code_links:
+                print(f"  Found: {link['url']} (source: {link['source']})")
+        else:
+            metadata["official_code"] = []
+            with open(metadata_path, "w", encoding="utf-8") as f:
+                json.dump(metadata, f, indent=2, ensure_ascii=False)
+            print("  No official code repositories found.")
     else:
         metadata["official_code"] = []
         with open(metadata_path, "w", encoding="utf-8") as f:
             json.dump(metadata, f, indent=2, ensure_ascii=False)
-        print("  No official code repositories found.")
 
-    # Summary
     page_count = paper_text.count("<!-- Page")
     has_math = bool(re.search(r"[\$\\]|\\frac|\\sum|\\int|\\mathbb", paper_text))
     has_figures = bool(re.search(r"[Ff]igure\s+\d", paper_text))
@@ -428,7 +525,7 @@ def main():
     print(f"  Math preserved: {'Yes' if has_math else 'No'}")
     print(f"  Figure references found: {'Yes' if has_figures else 'No'}")
     print(f"  Metadata saved: {metadata_path}")
-    print(f"  Official code links: {len(code_links)} found")
+    print(f"  Official code links: {len(metadata.get('official_code', []))} found")
     print(f"\nDone.")
 
 
