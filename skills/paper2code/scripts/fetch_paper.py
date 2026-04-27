@@ -24,6 +24,7 @@ Outputs:
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 
 import requests
@@ -409,17 +410,32 @@ def extract_local_pdf(pdf_path: Path, title: str | None, authors: str | None, ab
         print(f"ERROR: PDF not found: {pdf_path}", file=sys.stderr)
         return {}, None
 
-    print(f"Processing local PDF: {pdf_path}")
+    # Validate file is readable and has content
+    file_size = pdf_path.stat().st_size
+    if file_size == 0:
+        print(f"ERROR: PDF file is empty: {pdf_path}", file=sys.stderr)
+        return {}, None
+    if file_size < 1000:
+        print(f"WARNING: PDF file is very small ({file_size} bytes), may be corrupted or not a valid PDF", file=sys.stderr)
 
+    print(f"Processing local PDF: {pdf_path} ({file_size / 1024:.1f} KB)")
+
+    extraction_attempts = []
     paper_text = None
+
     print("\n--- Extracting text ---")
+    
+    # Try pymupdf4llm first (preserves math notation)
+    extraction_attempts.append("pymupdf4llm")
     paper_text = extract_with_pymupdf4llm(pdf_path)
 
     if paper_text and not check_text_quality(paper_text):
         print("  pymupdf4llm text quality poor, trying pdfplumber...")
         paper_text = None
 
+    # Fallback to pdfplumber
     if paper_text is None:
+        extraction_attempts.append("pdfplumber")
         paper_text = extract_with_pdfplumber(pdf_path)
 
     year = None
@@ -428,12 +444,14 @@ def extract_local_pdf(pdf_path: Path, title: str | None, authors: str | None, ab
         if year_match:
             year = year_match.group(0)
 
+    # Build metadata
     metadata = {
         "title": title or pdf_path.stem.replace("_", " ").replace("-", " "),
         "authors": [a.strip() for a in authors.split(",")] if authors else [],
         "abstract": abstract or "",
         "categories": [],
         "year": year,
+        "_extraction_attempts": extraction_attempts,
     }
 
     return metadata, paper_text
@@ -492,7 +510,13 @@ def main():
         sys.exit(1)
 
     if paper_text is None:
-        print("\nERROR: All extraction methods failed.", file=sys.stderr)
+        attempts = metadata.get("_extraction_attempts", [])
+        if attempts:
+            print(f"\nERROR: All extraction methods failed.", file=sys.stderr)
+            print(f"  Tried: {', '.join(attempts)}", file=sys.stderr)
+            print(f"  Please ensure the PDF is a valid text-based PDF (not a scanned image).", file=sys.stderr)
+        else:
+            print("\nERROR: All extraction methods failed.", file=sys.stderr)
         sys.exit(1)
 
     metadata_path = output_dir / "paper_metadata.json"

@@ -34,9 +34,9 @@ def identify_sections(text: str) -> list[dict]:
     # Patterns for section headings
     md_heading = re.compile(r"^(#{1,4})\s+(.+)$")
     numbered_heading = re.compile(
-        r"^(\d+(?:\.\d+)*)\s+([A-Z][A-Za-z\s:,\-]+)$"
+        r"^(\d+(?:\.\d+)*)\s+([A-Za-z][A-Za-z\s:,\-]+)$"
     )
-    allcaps_heading = re.compile(r"^([A-Z][A-Z\s]{4,})$")
+    allcaps_heading = re.compile(r"^([A-Z][A-Z\s]{2,})$")
 
     def save_current():
         if current_section and current_lines:
@@ -206,7 +206,7 @@ def extract_footnotes(text: str) -> list[dict]:
     )
 
     for match in fn_pattern.finditer(text):
-        content = match.group(0).strip()
+        content = match.group(3).strip() if match.group(3) else match.group(0).strip()
         if len(content) > 10:  # skip very short matches that are likely false positives
             footnotes.append(content)
 
